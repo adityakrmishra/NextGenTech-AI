@@ -6,6 +6,7 @@
     <title>NextGenTech-AI</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <style>
+        /* Updated CSS with loading animation */
         * {
             margin: 0;
             padding: 0;
@@ -149,6 +150,21 @@
             letter-spacing: 0.5px;
         }
 
+        /* New loading spinner styles */
+        .loader {
+            display: inline-block;
+            width: 30px;
+            height: 30px;
+            border: 3px solid rgba(255, 255, 255, 0.3);
+            border-radius: 50%;
+            border-top-color: #00b4d8;
+            animation: spin 1s ease-in-out infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
         @keyframes slideDown {
             from { transform: translateY(-100px); opacity: 0; }
             to { transform: translateY(0); opacity: 1; }
@@ -223,35 +239,57 @@
     </div>
 
     <script>
-        const API_KEY = 'sk-c7a1655733954b0fab85efbde28ac019';
-        const API_URL = 'https://api.deepseek.com/v1/chat/completions';
+        // Updated Frontend Code with Secure Backend Integration
+        const API_URL = 'http://localhost:3000/api/chat'; // Replace with your backend URL
 
         async function sendMessage() {
             const userInput = document.getElementById('userInput');
             const message = userInput.value.trim();
             if (!message) return;
 
+            // Add user message
             addMessage(message, 'user');
             userInput.value = '';
 
+            // Show loading indicator
+            const loadingMessage = createLoadingMessage();
+            
             try {
                 const response = await fetch(API_URL, {
                     method: 'POST',
                     headers: {
-                        'Content-Type': 'application/json',
-                        'Authorization': `Bearer ${API_KEY}`
+                        'Content-Type': 'application/json'
                     },
                     body: JSON.stringify({
-                        model: 'deepseek-chat',
-                        messages: [{ role: 'user', content: message }]
+                        message: message
                     })
                 });
 
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+
                 const data = await response.json();
-                const aiMessage = data.choices[0].message.content;
-                addMessage(aiMessage, 'ai');
+                removeLoadingMessage(loadingMessage);
+                addMessage(data.reply, 'ai');
             } catch (error) {
-                addMessage('⚠️ Error connecting to the AI. Please try again.', 'ai');
+                console.error('Error:', error);
+                removeLoadingMessage(loadingMessage);
+                addMessage('⚠️ Service temporarily unavailable. Please try again later.', 'ai');
+            }
+        }
+
+        function createLoadingMessage() {
+            const loadingDiv = document.createElement('div');
+            loadingDiv.className = 'message ai-message';
+            loadingDiv.innerHTML = '<div class="loader"></div>';
+            document.getElementById('chatContainer').appendChild(loadingDiv);
+            return loadingDiv;
+        }
+
+        function removeLoadingMessage(element) {
+            if (element && element.parentNode) {
+                element.parentNode.removeChild(element);
             }
         }
 
@@ -264,6 +302,7 @@
             chatContainer.scrollTop = chatContainer.scrollHeight;
         }
 
+        // Handle Enter key
         document.getElementById('userInput').addEventListener('keypress', (e) => {
             if (e.key === 'Enter') sendMessage();
         });
